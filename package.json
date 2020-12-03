@@ -12,5 +12,10 @@
   "devDependencies": {
     "electron": "^3.0.10",
     "socket.io": "^2.2.0"
+  },
+  "dependencies": {
+    "@magenta/music": "^1.20.0",
+    "file-saver": "^2.0.2",
+    "lit-element": "^2.4.0"
   }
 }

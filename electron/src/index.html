@@ -1,12 +1,215 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta charset="UTF-8">
-  <title>Electron Boilerplate for N4M</title>
+    <meta charset="UTF-8">
+    <title>Gang gang</title>
+    <script src="https://cdn.jsdelivr.net/npm/@magenta/music@^1.0.0"></script>
+    <script src="input-knobs.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <h1>Hello, electron!</h1>
-  <button id="helloButton">👏👏👏👏👏👏👏 </button>
-  <script src="../dist/main.js"></script>
+    <div class='drag-region' style="-webkit-app-region: drag"></div>
+
+    <div class='top-content-right'>
+        <div class='title-container'>
+            <h2 class='brand'>AutoBeat</h2>
+            <h1>AI-100</h1>
+        </div>
+        <div class='above-sequencer-board'>
+            <div class='top-button-bar'>
+                <div class='contain-buttons-top'>
+                    <button class='left-buttons magenta-button' id='button-clear'>Clear</button>
+                    <a class="playpause btn-floating btn-large waves-effect waves-light blue">
+                        <!-- <button class="left-buttons material-icons play-icon playpause">Demo</button> -->
+                        <button id='fireclip' class="left-buttons material-icons magenta-button">Fire</button>
+                        <!-- <button class="left-buttons material-icons pause-icon playpause" style="display: none">Stop</button> -->
+                    </a>
+                </div>
+
+                <div class='contain-buttons-on-right'>
+                    <div class='contain-buttons-master'>
+                        <div id='tempoInput' class='master-input'>
+
+                            <p>Tempo: </p>
+                            <input id="frame-num-input" class="inslide unselectable" type="number" min="20" max="999" />
+
+                            <!-- <input for='inputslider' id="dragnumber" class='hideinput' min="20" max="999"
+                                        step="1" value="120" type="range">
+                                    <output id="dragnumber_output" for="dragnumber">120</output> -->
+                        </div>
+
+                        <div id='tempoInput' class='master-input'>
+                            <p>Swing: </p>
+                            <input id="frame-num-input2" class="inslide unselectable" type="number" min="20" max="999" />
+                        </div>
+
+
+                        <!-- <div class="control">
+                            <p class="range-field grey-text">
+                                <input type="range" id="swing" min="0.5" max="0.7" value="0.55" step="0.05">
+                                <label>Swing</label>
+                            </p>
+                        </div>
+         -->
+                        <!-- 
+                        <div id='swingInput' class='master-input'>
+                            <p>Swing: </p>
+                            <div>
+                                <label for="swing containing" class='hide-range'>
+                                    <input for='inputslider' id="swing" min="1" max="999" step="1" value="120"
+                                        type="range">
+                                    <output id="swing_output" for="swing">120</output>
+                                </label>
+                            </div>
+                        </div> -->
+
+                    </div>
+                    <div class='contain-buttons-top'>
+                        <button id='length8' class='contain-length-buttons' value='8'>16</button>
+                        <button id='length16' class='contain-length-buttons lengthButtonActive' value='16'>32</button>
+                        <button id='length32' class='contain-length-buttons' value='32'>64</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class='rail secondrail'></div>
+
+        </div>
+    </div>
+
+    <div class='middle-content'>
+
+        <div class='topleft'>
+            <div class='knobs'>
+
+                <div class='backgroundKnob'>
+                    <input id='temperature' type="range" class="input-knob" data-diameter="115" data-src="img/knob.svg" min="0.5" max="2" value="1.1" step="0.1" data-tooltip="Higher temperatures will make the neural network generates wilder patterns" data-delay="500" />
+                </div>
+                <label>Temp</label>
+
+                <div class='backgroundKnob'>
+
+                    <input id='density' type="range" class="input-knob" data-diameter="115" data-src="img/knob.svg" min="0" max="0.75" value="0.5" step="0.05" data-delay="500" />
+                </div>
+                <label>Threshold</label>
+
+                <div class='backgroundKnob'>
+                    <input id='drunk' type="range" class="input-knob" data-diameter="115" data-src="img/knob.svg" min="0.5" max="1" value="0" step="0.01" data-tooltip="Makes Beats WONK" />
+                </div>
+                <label>Drunk</label>
+
+            </div>
+        </div>
+
+        <section id='sequencer-magenta'>
+            <div class='SequencerLabels'>
+                <div class='Label-Cell-Size'>
+                    <p>BD</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>SD</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>CH</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>OH</p>
+                </div>
+                <div class='Label-Cell-Size LTLABEL'>
+                    <p>LT</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>MT</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>HT</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>CP</p>
+                </div>
+                <div class='Label-Cell-Size'>
+                    <p>RS</p>
+                </div>
+            </div>
+
+
+
+            <div class="progress pink">
+                <div class="indeterminate white"></div>
+            </div>
+            <div class="app" style="display: none;">
+                <div class="sequencer">
+                    <div class="steps"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class='container-bottom'>
+        <div class='contain-main-buttons'>
+            <button class='regenerate bottomleft'>Generate</button>
+            <!-- <button class='bottomleft midi-output'>Send</button> -->
+            <button id='sendNotes' class='bottomleft'>Send</button>
+        </div>
+
+        <div class='containgenerator-buttons'>
+            <div class='generator-buttons'>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-1' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>1</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-2' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>2</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-3' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>3</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-4' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>4</button>
+                </div>
+
+
+                <!-- CUSTOM PRESETS -->
+
+
+                <div class='sequence-button-contain'>
+                    <button id='button-5' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>5</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-6' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>6</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-7' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>7</button>
+                </div>
+
+                <div class='sequence-button-contain'>
+                    <button id='button-8' class='button-pad-off sequence-button' width='74.96px' height='72.32px'>8</button>
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+
+    </div>
+
+
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.20/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.65/Tone.js"></script>
+    <!-- <script src="script.js"></script> -->
+    <script src="../dist/main.js"></script>
 </body>
+
 </html>
