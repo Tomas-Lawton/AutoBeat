@@ -2,10 +2,7 @@
 // this file will be the entry point for Electron App
 // when `npm start` is called.
 
-
 const { app, BrowserWindow } = require("electron");
-// import * as Tone from 'tone';
-
 
 app.on("ready", () => {
 
@@ -25,14 +22,11 @@ app.on("ready", () => {
         window = null;
     });
 
+    // How to fix aspect ratio while scaling window?
     // window.setAspectRatio(1.57);
 
-
-    // For Development Only
+    // For Development Only (remove for prod version?)
     if (process.env.DEBUG) {
-        // This will not be open when it's called in Max patch,
-        // because the environment variable DEBUG will not be provided.
-        // c.f. See ../../index.js, where it calls child_process.spawn to invoke Electron
         window.webContents.openDevTools();
     }
 
