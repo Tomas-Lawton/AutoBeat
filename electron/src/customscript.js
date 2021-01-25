@@ -1,19 +1,21 @@
 import io from "socket.io-client";
+import * as Tone from 'tone';
 
 const socket = io("http://localhost:3000").connect();
+const socket2 = io("http://localhost:3001").connect();
+
+
+socket2.on("connect", () => {
+    console.log("Listening for Read Data.");
+});
 
 socket.on("connect", () => {
     console.log("Connected to Max 8 from Custom");
 });
 
-// import WebMidi from 'webmidi';
-import * as Tone from 'tone';
-
-
 const scale = (num, in_min, in_max, out_min, out_max) => {
     return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
-
 
 const DRUM_CLASSES = [
     'Kick',
@@ -27,66 +29,6 @@ const DRUM_CLASSES = [
     'Rim'
 ];
 var TIME_HUMANIZATION = 0.0;
-
-var sampleBaseUrl = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/969699';
-
-var reverb = new Tone.Convolver(
-    `${sampleBaseUrl}/small-drum-room.wav`
-).toMaster();
-// reverb.wet.value = 0.35;
-
-let snarePanner = new Tone.Panner().connect(reverb);
-new Tone.LFO(0.13, -0.25, 0.25).connect(snarePanner.pan).start();
-
-let drumKit = [
-    new Tone.Players({
-        high: `${sampleBaseUrl}/808-kick-vh.mp3`,
-        med: `${sampleBaseUrl}/808-kick-vm.mp3`,
-        low: `${sampleBaseUrl}/808-kick-vl.mp3`
-    }).toMaster(),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/flares-snare-vh.mp3`,
-        med: `${sampleBaseUrl}/flares-snare-vm.mp3`,
-        low: `${sampleBaseUrl}/flares-snare-vl.mp3`
-    }).connect(snarePanner),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/808-hihat-vh.mp3`,
-        med: `${sampleBaseUrl}/808-hihat-vm.mp3`,
-        low: `${sampleBaseUrl}/808-hihat-vl.mp3`
-    }).connect(new Tone.Panner(-0.5).connect(reverb)),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/808-hihat-open-vh.mp3`,
-        med: `${sampleBaseUrl}/808-hihat-open-vm.mp3`,
-        low: `${sampleBaseUrl}/808-hihat-open-vl.mp3`
-    }).connect(new Tone.Panner(-0.5).connect(reverb)),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/slamdam-tom-low-vh.mp3`,
-        med: `${sampleBaseUrl}/slamdam-tom-low-vm.mp3`,
-        low: `${sampleBaseUrl}/slamdam-tom-low-vl.mp3`
-    }).connect(new Tone.Panner(-0.4).connect(reverb)),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/slamdam-tom-mid-vh.mp3`,
-        med: `${sampleBaseUrl}/slamdam-tom-mid-vm.mp3`,
-        low: `${sampleBaseUrl}/slamdam-tom-mid-vl.mp3`
-    }).connect(reverb),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/slamdam-tom-high-vh.mp3`,
-        med: `${sampleBaseUrl}/slamdam-tom-high-vm.mp3`,
-        low: `${sampleBaseUrl}/slamdam-tom-high-vl.mp3`
-    }).connect(new Tone.Panner(0.4).connect(reverb)),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/909-clap-vh.mp3`,
-        med: `${sampleBaseUrl}/909-clap-vm.mp3`,
-        low: `${sampleBaseUrl}/909-clap-vl.mp3`
-    }).connect(new Tone.Panner(0.5).connect(reverb)),
-    new Tone.Players({
-        high: `${sampleBaseUrl}/909-rim-vh.wav`,
-        med: `${sampleBaseUrl}/909-rim-vm.wav`,
-        low: `${sampleBaseUrl}/909-rim-vl.wav`
-    }).connect(new Tone.Panner(0.5).connect(reverb))
-];
-
-
 let midiDrums = [36, 38, 42, 46, 41, 43, 45, 49, 51];
 let reverseMidiMapping = new Map([
     [36, 0],
@@ -153,23 +95,12 @@ let reverseMidiMapping = new Map([
 ]);
 
 let temperature = 1.2;
-
-// let outputs = {
-//     internal: {
-//         play: (drumIdx, velocity, time) => {
-//             drumKit[drumIdx].get(velocity).start(time);
-//         }
-//     }
-// };
-
 let rnn = new mm.MusicRNN(
     'https://storage.googleapis.com/download.magenta.tensorflow.org/tfjs_checkpoints/music_rnn/drum_kit_rnn'
 );
 let vae = new mm.MusicVAE(
     'https://storage.googleapis.com/download.magenta.tensorflow.org/tfjs_checkpoints/music_vae/drums_2bar_hikl_small'
 );
-
-// EVERYTHING HAPPENS HERE AFTER THE MODELS ARE LOADED.
 let res;
 
 Promise.all([
@@ -177,12 +108,11 @@ Promise.all([
     vae.initialize(),
     res = new Tone.Buffer()
 
-]).then(([vars]) => {
+]).then(([InitialisedModels]) => {
 
-    // THIS IS THE OBJECT THAT KEEPS TRACK OF THE GROOVE
+    // Drum note sequence
     let state = {
         // PATTERN LENGTH
-
         patternLength: 16,
         seedLength: 4,
         swing: 0,
@@ -196,8 +126,24 @@ Promise.all([
     let stepEls = [],
         hasBeenStarted = false,
         sequence,
-        densityRange = null,
-        activeOutput = 'internal';
+        densityRange = null;
+
+
+    socket2.on("ClipData", (data) => {
+        var items = data.data.split(/[ ,]+/);
+        // console.log(items);
+        const numNotes = items[1];
+        var noteData = [];
+        for (let i = 0; i < numNotes; i++) {
+            var currentNote = (i * 6) + 2;
+            var thisNote = [];
+            thisNote.push(items[currentNote + 1]); //midi pitch
+            thisNote.push(items[currentNote + 2]); //quantised start time
+            noteData.push(thisNote);
+        }
+        console.log("Note Array: ", noteData);
+
+    });
 
     document.getElementById("length8").addEventListener("click", function() {
         setPatternLength(8);
@@ -216,19 +162,15 @@ Promise.all([
     });
 
     document.getElementById("length32").addEventListener("click", function() {
-        // width: 35.5px;
         setPatternLength(32);
         var allcells = document.getElementsByClassName('cell');
         for (var i = 0; i < allcells.length; i++) {
             allcells[i].style.width = '17.5px';
         }
-
     });
-
 
     document.body.onkeyup = function(e) {
         if (e.key === 32 || e.key === ' ') {
-
             const socketData = {
                 'PLAYPAUSE': "PlayPause"
             }
@@ -243,55 +185,23 @@ Promise.all([
         if (event.defaultPrevented) {
             return; // Do nothing if the event was already processed
         }
-
         if (event.key == 's') {
             convertPatterntoMidi();
-            console.log('pressed S key');
         }
-
         if (event.key == 'g') {
             GENERATESEQUENCE();
-            console.log('pressed g key');
         }
-
         if (event.key == 'f') {
             FIRECLIP();
-            console.log('pressed f key');
         }
-
         event.preventDefault();
-
     }, true);
 
-    // Length is how much more to generate
-    // Seed is the array of values up to the bar
     function generatePattern(seed, length) {
-        // Convert from array into note sequence for magenta
         let seedSeq = toNoteSequence(seed);
-        console.log('input pattern:', seed);
-        console.log('seedSeq: ', seedSeq);
-        // In future 'update' pattern from midi clip.
-        // continues to give the next part of sequence
-        // then concatonates the continued to the seed array
-        // must convert from noteSequence back to array 
-        // to write to midi this note sequence should be converted to midi.
-
-        // return the final rnn sequence as array of notes
-
-        console.log('current temp, ', temperature);
         return rnn
             .continueSequence(seedSeq, length, temperature)
             .then(r => seed.concat(fromNoteSequence(r, length)));
-    }
-
-    function getStepVelocity(step) {
-        if (step % 4 === 0) {
-            return 'high';
-        } else if (step % 2 === 0) {
-            return 'med';
-        } else {
-            return 'low';
-        }
     }
 
     function humanizeTime(start, end) {
@@ -299,48 +209,6 @@ Promise.all([
         var startTime = start - TIME_HUMANIZATION / 2 + randomValue * TIME_HUMANIZATION;
         var endTime = end - TIME_HUMANIZATION / 2 + randomValue * TIME_HUMANIZATION;
         return [startTime, endTime];;
-    }
-
-    function playPattern() {
-        // sequence = new Tone.Sequence(
-        //     (time, { drums, stepIdx }) => {
-        //         let isSwung = stepIdx % 2 !== 0;
-        //         if (isSwung) {
-        //             time += (state.swing - 0.5) * Tone.Time('8n').toSeconds();
-        //         }
-        //         let velocity = getStepVelocity(stepIdx);
-        //         drums.forEach(d => {
-        //             let humanizedTime = stepIdx === 0 ? time : humanizeTime(time);
-        //             // outputs[activeOutput].play(d, velocity, time);
-        //             visualizePlay(humanizedTime, stepIdx, d);
-        //         });
-        //     },
-        //     state.pattern.map((drums, stepIdx) => ({ drums, stepIdx })),
-        //     '16n'
-        // ).start();
-    }
-
-    function visualizePlay(time, stepIdx, drumIdx) {
-        Tone.Draw.schedule(() => {
-            if (!stepEls[stepIdx]) return;
-            let animTime = Tone.Time('2n').toMilliseconds();
-            let cellEl = stepEls[stepIdx].cellEls[drumIdx];
-            if (cellEl.classList.contains('on')) {
-                let baseColor = stepIdx < state.seedLength ? '#e91e63' : '#64b5f6';
-                cellEl.animate(
-                    [{
-                            transform: 'translateZ(-100px)',
-                            backgroundColor: '#fad1df'
-                        },
-                        {
-                            transform: 'translateZ(50px)',
-                            offset: 0.7
-                        },
-                        { transform: 'translateZ(0)', backgroundColor: baseColor }
-                    ], { duration: animTime, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
-                );
-            }
-        }, time);
     }
 
     function renderPattern(regenerating = false) {
@@ -352,7 +220,6 @@ Promise.all([
         }
 
         // STEP INDEX STYLING
-
         for (let stepIdx = 0; stepIdx < state.patternLength; stepIdx++) {
             let step = state.pattern[stepIdx];
             let stepEl, gutterEl, cellEls;
@@ -374,8 +241,6 @@ Promise.all([
                 gutterEl = document.createElement('div');
                 // Adds or removes line
                 gutterEl.classList.add('gutter');
-
-                // document.getElementById('test-gutter').classList.add('gutter');
                 seqEl.insertBefore(gutterEl, stepEl.nextSibling);
             } else if (gutterEl && stepIdx >= state.pattern.length) {
                 gutterEl.remove();
@@ -387,9 +252,7 @@ Promise.all([
             } else if (gutterEl) {
                 gutterEl.classList.remove('seed-marker');
             }
-
             // CELLS IN EACH STEP
-
             for (let cellIdx = 0; cellIdx < DRUM_CLASSES.length; cellIdx++) {
                 let cellEl;
                 if (cellEls[cellIdx]) {
@@ -410,7 +273,6 @@ Promise.all([
                 }
             }
             stepEls[stepIdx] = { stepEl, gutterEl, cellEls };
-
             let stagger = stepIdx * (300 / (state.patternLength - state.seedLength));
             setTimeout(() => {
                 if (stepIdx < state.seedLength) {
@@ -425,50 +287,18 @@ Promise.all([
                 }
             }, stagger);
         }
-
-        // setTimeout(repositionRegenerateButton, 0);
-    }
-
-    function repositionRegenerateButton() {
-        // let regenButton = document.querySelector('.regenerate');
-        // let sequencerEl = document.querySelector('.sequencer');
-        // let seedMarkerEl = document.querySelector('.gutter.seed-marker');
-        // let regenLeft =
-        //     sequencerEl.offsetLeft +
-        //     seedMarkerEl.offsetLeft +
-        //     seedMarkerEl.offsetWidth / 2 -
-        //     regenButton.offsetWidth / 2;
-        // let regenTop =
-        //     sequencerEl.offsetTop +
-        //     seedMarkerEl.offsetTop +
-        //     seedMarkerEl.offsetHeight / 2 -
-        //     regenButton.offsetHeight / 2;
-        // regenButton.style.left = `${regenLeft}px`;
-        // regenButton.style.top = `${regenTop}px`;
-        // regenButton.style.visibility = 'visible';
     }
 
     function regenerate() {
-
         // Takes the values in the pattern array up to the point of
         // the dividing bar. Creates Seed.
         let seed = _.take(state.pattern, state.seedLength);
         renderPattern(true);
-
-        //Seed length = spaces up to bar
-        // Pattern length = total length
-        //Seed is the values up to that bar
-
-
-
-
-        // Second arg is how much to generate?        
         return generatePattern(seed, state.patternLength - seed.length).then(
             result => {
                 // The entire sequence is updated to the generated continuiation + seed
                 state.pattern = result;
                 // Update everything else.
-
                 // TURN NEW PATTERN INTO NOTE SEQUENCE AND THEN INTO MIDI
                 onPatternUpdated();
                 setDensityValue();
@@ -480,50 +310,30 @@ Promise.all([
     document.getElementById('sendNotes').addEventListener('click', convertPatterntoMidi);
 
     function convertPatterntoMidi() {
-        // var isDict = false;
-
-        console.log('current array pattern ', state.pattern);
         // MAX DOES NOT SUPPORT ARRAYS OF DICTIONARIES 
+        console.log("EXAMPLE SEQUENCE: \n");
+        console.log(state.pattern);
         var NOTESEQUENCE = toNoteSequence(state.pattern);
-
-        // if (!isDict) {
-
         var newseq = {};
         var i = 0;
-
         for (i = 0; i < NOTESEQUENCE.notes.length; i++) {
             newseq[i.toString()] = NOTESEQUENCE.notes[i];
         }
-
-        console.log(newseq);
         NOTESEQUENCE.notesdict = newseq;
         delete NOTESEQUENCE.notes;
-
-        // isDict = true;
-
-        console.log('complete Note Sequence', NOTESEQUENCE);
 
         // 120 * 2 for quaver and * 2 again because max displace ments of quaver is a semiquaver. (Swing is a ratio between straight and semiquaver)
         // 60 000/tempo for millisecond between crochets at given tempo
 
         var maxdisplacement = (60 / state.tempo) / 2;
-        console.log('max displace', maxdisplacement);
-
         var scaleddisplacement = scale(state.swing, 0, 1, 0, maxdisplacement);
-        console.log('displace', scaleddisplacement);
-
         var numNotes = Object.keys(NOTESEQUENCE.notesdict).length;
         for (i = 0; i < numNotes; i++) {
             let isSwung = false;
-
-            console.log('STARTTIME \n', NOTESEQUENCE.notesdict[i.toString()].startTime);
-
             var testisOdd = ((NOTESEQUENCE.notesdict[i.toString()].startTime.toFixed(1) % 1) != 0);
-
             if (testisOdd) {
                 isSwung = true;
             }
-
             // SwingRatio
             var start = NOTESEQUENCE.notesdict[i.toString()].startTime;
             var end = NOTESEQUENCE.notesdict[i.toString()].endTime;
@@ -535,12 +345,10 @@ Promise.all([
 
             // Drunken
             var newTimes = humanizeTime(start, end);
-            // console.log('drunk', newTimes);
             NOTESEQUENCE.notesdict[i.toString()].startTime = newTimes[0];
             NOTESEQUENCE.notesdict[i.toString()].endTime = newTimes[1];
         }
 
-        console.log("Updated Value", NOTESEQUENCE);
         const notes = NOTESEQUENCE.notesdict;
         const socketData = {
             'NoteSequence': notes,
@@ -573,9 +381,6 @@ Promise.all([
                 state.pattern[stepIdx].push(cellIdx);
                 cellEl.classList.add('on');
             }
-            // if (sequence) {
-            //     sequence.at(stepIdx, { stepIdx, drums: state.pattern[stepIdx] });
-            // }
             setDensityValue();
             densityRange = null;
         }
@@ -595,20 +400,17 @@ Promise.all([
         let stepsDown = density / 0.05;
         let stepsUp = (0.75 - density) / 0.05;
         let stepsBeyond = 0.25 / 0.05;
-
         let emptySeq = toNoteSequence([]);
         let fullSeq = toNoteSequence(
             _.times(state.pattern.length, () => _.range(9))
         );
         let currentSeq = toNoteSequence(state.pattern);
-
         densityRange = [];
         let interpsUp = stepsDown > 0 ? vae.interpolate([emptySeq, currentSeq], stepsDown) : Promise.resolve([]);
         let interpsDown = stepsUp > 0 ? vae.interpolate(
             [currentSeq, fullSeq],
             stepsUp + stepsBeyond
         ) : Promise.resolve([]);
-
         interpsDown.then(interps => {
                 for (let noteSeq of interps) {
                     densityRange.push(fromNoteSequence(noteSeq, state.pattern.length));
@@ -652,25 +454,11 @@ Promise.all([
                         endTime: (index + 1) * 0.5
                     }))
                 ),
-                //     notesdict: _.flatMap(pattern, (step, index) =>
-                //         step.map(d => ({
-                //             velocity: 85,
-                //             instrument: 0,
-                //             program: 0,
-                //             isDrum: true,
-                //             pitch: midiDrums[d],
-                //             startTime: index * 0.5,
-                //             endTime: (index + 1) * 0.5
-                //         }))
-                // )
             },
             1
         );
-        // console.log('NS ', NOTESEQUENCE);
         return NOTESEQUENCE;
     }
-
-
 
     // Turns result of continue into array for sequence.
     function fromNoteSequence({ notes }, patternLength) {
@@ -702,94 +490,7 @@ Promise.all([
         );
         state.patternLength = newPatternLength;
         onPatternUpdated();
-        if (Tone.Transport.state === 'started') {
-            playPattern();
-        }
     }
-
-    function updatePlayPauseIcons() {
-        if (Tone.Transport.state === 'started') {
-            document.querySelector('.playpause .pause-icon').style.display = null;
-            document.querySelector('.playpause .play-icon').style.display = 'none';
-        } else {
-            document.querySelector('.playpause .play-icon').style.display = null;
-            document.querySelector('.playpause .pause-icon').style.display = 'none';
-        }
-    }
-
-    function encodeState() {
-        return Object.keys(state)
-            .reduce((a, k) => {
-                a.push(k + '=' + JSON.stringify(state[k]));
-                return a;
-            }, [])
-            .join('&');
-    }
-
-    // clearSequence();
-
-
-    // WebMidi.enable(err => {
-    //     if (err) {
-    //         console.error('WebMidi could not be enabled', err);
-    //         return;
-    //     }
-    //     // document.querySelector('.webmidi-enabled').style.display = 'block';
-    //     let outputSelector = document.querySelector('.midi-output');
-
-    //     function onOutputsChange() {
-    //         while (outputSelector.firstChild) {
-    //             outputSelector.firstChild.remove();
-    //         }
-    //         let internalOption = document.createElement('option');
-    //         internalOption.value = 'internal';
-    //         internalOption.innerText = 'Internal drumkit';
-    //         outputSelector.appendChild(internalOption);
-    //         for (let output of WebMidi.outputs) {
-    //             let option = document.createElement('option');
-    //             option.value = output.id;
-    //             option.innerText = output.name;
-    //             outputSelector.appendChild(option);
-    //         }
-    //         onActiveOutputChange('internal');
-    //     }
-
-    //     function onActiveOutputChange(id) {
-    //         if (activeOutput !== 'internal') {
-    //             outputs[activeOutput] = null;
-    //         }
-    //         activeOutput = id;
-    //         if (activeOutput !== 'internal') {
-    //             let output = WebMidi.getOutputById(id);
-    //             outputs[id] = {
-    //                 play: (drumIdx, velo, time) => {
-    //                     let delay = (time - Tone.now()) * 1000;
-    //                     let duration = Tone.Time('16n').toMilliseconds();
-    //                     let velocity = { high: 1, med: 0.75, low: 0.5 };
-    //                     output.playNote(midiDrums[drumIdx], 1, {
-    //                         time: delay > 0 ? `+${delay}` : WebMidi.now,
-    //                         velocity,
-    //                         duration
-    //                     });
-    //                 }
-    //             };
-    //         }
-    //         for (let option of Array.from(outputSelector.children)) {
-    //             option.selected = option.value === id;
-    //         }
-    //     }
-
-    //     onOutputsChange();
-    //     WebMidi.addListener('connected', onOutputsChange);
-    //     WebMidi.addListener('disconnected', onOutputsChange);
-    //     // $(outputSelector)
-
-    //     // outputSelector
-    //     //     .addEventListener('change', evt => onActiveOutputChange(evt.target.value))
-    //     //     .material_select();
-    // });
-
-
 
     document.querySelector('.app').addEventListener('click', event => {
         if (event.target.classList.contains('cell')) {
@@ -798,18 +499,12 @@ Promise.all([
     });
 
     function GENERATESEQUENCE() {
-        // event.preventDefault();
-        // event.currentTarget.classList.remove('pulse');
         document.querySelector('.playpause').classList.remove('pulse');
         regenerate().then(() => {
             if (!hasBeenStarted) {
                 Tone.context.resume();
                 Tone.Transport.start();
-                // updatePlayPauseIcons();
                 hasBeenStarted = true;
-            }
-            if (Tone.Transport.state === 'started') {
-                setTimeout(() => playPattern(), 0);
             }
         });
     }
@@ -817,12 +512,10 @@ Promise.all([
         GENERATESEQUENCE();
     });
 
-
     function FIRECLIP() {
         const socketData = {
             'startClip': 'sent'
         }
-
         socket.emit("startClip", {
             data: socketData
         });
@@ -833,22 +526,6 @@ Promise.all([
 
     document.querySelector('.playpause').addEventListener('click', event => {
         event.preventDefault();
-        console.log("HIT PLAY");
-        // document.querySelector('.playpause').classList.remove('pulse');
-        // if (Tone.Transport.state !== 'started') {
-        //     Tone.context.resume();
-        //     Tone.Transport.start();
-        //     playPattern();
-        //     // updatePlayPauseIcons();
-        //     hasBeenStarted = true;
-        // } else {
-        //     if (sequence) {
-        //         sequence.dispose();
-        //         sequence = null;
-        //     }
-        //     Tone.Transport.pause();
-        //     // updatePlayPauseIcons();
-        // }
     });
 
     let draggingSeedMarker = false;
@@ -894,11 +571,6 @@ Promise.all([
         ) {
             state.pattern = densityRange[patternIndex];
             renderPattern();
-            // if (sequence) {
-            //     state.pattern.forEach((drums, stepIdx) =>
-            //         sequence.at(stepIdx, { stepIdx, drums })
-            //     );
-            // }
         }
     });
 
@@ -914,14 +586,11 @@ Promise.all([
             temperature = +evt.target.value;
         });
 
-    // window.addEventListener('resize', repositionRegenerateButton);
-
     renderPattern();
     setDensityValue();
 
     document.querySelector('.progress').remove();
     document.querySelector('.app').style.display = null;
-
 
     const presets = ['button-1', 'button-2', 'button-3', 'button-4'];
     var customDict = { 'button-5': null, 'button-6': null, 'button-7': null, 'button-8': null };
@@ -942,9 +611,6 @@ Promise.all([
 
             var copy = {};
             Object.assign(copy, customDict);
-            // console.log(dict, copy);
-
-            console.log('Storage Before: ', copy);
 
             if (copy.hasOwnProperty(oldData)) {
                 console.log('setting');
@@ -952,15 +618,8 @@ Promise.all([
             }
 
             customDict = copy;
-
-            console.log('The old key was: ', oldData);
-            console.log('Storage After: ', customDict);
-
             const SelectedID = event.target.id;
             setlastClicked = SelectedID;
-
-            console.log('the new key is: ', SelectedID);
-
             if (customDict.hasOwnProperty(SelectedID)) {
                 console.log('got key');
                 if (customDict[SelectedID] != null) {
@@ -970,8 +629,6 @@ Promise.all([
                     state.seedLength = customDict[SelectedID][2];
                 } else { console.log('no saved content yet'); }
             } else { console.log('not a custom preset'); }
-
-
 
             document.querySelectorAll('.sequence-button').forEach(item => {
                 if (item.id === event.target.id) {
@@ -1044,7 +701,6 @@ Promise.all([
                     item.classList.remove('custom-button');
                     item.src = "img/pad-off.png";
                 }
-
             })
         })
     });
@@ -1063,16 +719,23 @@ Promise.all([
 
     document.querySelector('#button-clear').addEventListener("click", function(event) {
         clearSequence();
-        console.log('clicked clear');
-
     });
 
+    document.querySelector('#button-read').addEventListener("click", function(event) {
+        readAbletonClip();
+        console.log('clicked read');
+    });
+
+    function readAbletonClip() {
+        const socketData = {
+            'readAbleton': 'emptymessage'
+        }
+        socket.emit("readAbleton", {
+            data: socketData
+        });
+    }
+
     function clearSequence() {
-        // toNoteSequence([])
-        // let emptysequence = []
-        // for (let i = 0; i < state.patternLength; i++) {
-        //     emptysequence.push([''])
-        // }
         state.seed = [
             [],
             [],
@@ -1082,20 +745,8 @@ Promise.all([
         state.pattern = [];
 
         setPatternLength(state.patternLength);
-        // state.patternLength = state.patternLength;
-        // setDensityValue();
         onPatternUpdated();
-
-
-        // state.patternLength = 0;
-
-
-        // renderPattern();
     }
-
-
-
-
 
     ///////////////////////////////////////////////
 
@@ -1123,8 +774,6 @@ Promise.all([
         numStart = parseInt(numInput.value);
         numStart = isNaN(numStart) ? 0 : numStart;
         console.log(numStart);
-
-        // add listeners for mousemove, mouseup
         window.addEventListener("mousemove", mousemoveNum);
         window.addEventListener("mouseup", mouseupNum);
     }
@@ -1154,20 +803,7 @@ Promise.all([
         socket.emit("dispatch", {
             data: socketData
         });
-
-
-
-        // console.log("GOT INFO ", event);
-        // if (isNaN(parseInt(numInput.value))) {
-        //     numInput.value = 0;
-        // }
     }
-
-
-
-
-
-
 
     function mousedownSwing(e) {
         mouseNumStartPosition.y = e.pageY;
@@ -1198,26 +834,7 @@ Promise.all([
     }
 
     function SwingInputChange(val) {
-        console.log('got SWING', val);
-
         var scaled = scale(val, 0, 10, 0, 1);
         setSwing(scaled);
-
-
-        // Tone.Transport.bpm.value = val;
-        // state.tempo = val;
-        // currentTempo.a = val;
-        // console.log("GOT INFO ", event);
-        // if (isNaN(parseInt(numInput.value))) {
-        //     numInput.value = 0;
-        // }
     }
-
-
-
-
-
-
-
-
 })

@@ -1,20 +1,16 @@
-// Because this file is specified as the `main` in package.json
-// this file will be the entry point for Electron App
-// when `npm start` is called.
+// Main Electron Node Process: Initialise the frontend here.
 
 const { app, BrowserWindow } = require("electron");
+const path = require('path');
 
 app.on("ready", () => {
-
     console.log("Electron has started");
-
-    // Launch a window and load index.html
     let window = new BrowserWindow({
         width: 990,
         height: 700,
         resizable: false,
-        // frame: false,
-        titleBarStyle: 'hiddenInset'
+        titleBarStyle: 'hiddenInset',
+        icon: path.join(__dirname, 'assets/icons/png/64x64.png')
     });
     window.loadFile("./src/index.html");
 
@@ -33,9 +29,7 @@ app.on("ready", () => {
 });
 
 app.on("window-all-closed", function() {
-
     if (process.platform !== "darwin") {
         app.quit();
     }
-
 });

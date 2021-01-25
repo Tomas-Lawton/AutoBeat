@@ -13,6 +13,7 @@
     "license": "ISC",
     "dependencies": {
         "electron-json-storage": "^4.3.0",
+        "http": "0.0.1-security",
         "socket.io-client": "^2.1.1",
         "tone": "^14.7.58",
         "webmidi": "^2.5.1"

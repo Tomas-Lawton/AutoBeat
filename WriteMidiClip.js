@@ -1,7 +1,6 @@
-post('JSON PARSE FILE ON \n');
-// const MagentaCore = require('@magenta/music/node/core');
-
 autowatch = 1;
+outlets = 2;
+
 var SequenceLength = 8;
 
 function log() {
@@ -25,44 +24,57 @@ function log() {
 log("___________________________________________________");
 log("Reload:", new Date);
 
-//--------------------------------------------------------------------
-// Clip class
-
-function sample_callback2() {
-    post('got live api \n')
-}
-
 function setSeqLength(inputdata) {
     log('setting sequence length!');
     log(inputdata);
     SequenceLength = inputdata;
 }
 
-
-function Clip() {
-
+function ReadClip() {
     this.trackclipslot = new LiveAPI("live_set view highlighted_clip_slot");
+    this.liveObject = new LiveAPI("live_set view highlighted_clip_slot clip");
     var selectedtrack = new LiveAPI("live_set view selected_track");
-
+    this.noteData;
     var isArmed = selectedtrack.get('arm');
     log('ARMING IS: ', isArmed);
     if (isArmed == 1) {
         log('IS ARMED');
-
-
+        // Check there is a clip
         var YesClip = this.trackclipslot.get('has_clip');
+        if (YesClip == true) {
+            const startTime = 0;
+            var timeRange = this.liveObject.get('length');
+            const startPitch = 0;
+            const pitchRange = 128;
+            var data = this.liveObject.call("get_notes", startTime, startPitch, timeRange, pitchRange);
+            this.noteData = data;
+            // Set this.noteData to none otherwise.
+        } else log('No Clip in clipslot');
+    } else log('NOT ARMED');
 
+    ReadClip.prototype.returnData = function() {
+        return this.noteData;
+    }
+
+}
+
+// For creating new clips and messing with the note data. Use ReadClip to get a clip and export current note data.
+function Clip() {
+    this.trackclipslot = new LiveAPI("live_set view highlighted_clip_slot");
+    var selectedtrack = new LiveAPI("live_set view selected_track");
+    var isArmed = selectedtrack.get('arm');
+    log('ARMING IS: ', isArmed);
+    if (isArmed == 1) {
+        log('IS ARMED');
+        var YesClip = this.trackclipslot.get('has_clip');
         if (YesClip == true) {
             this.isPlaying = this.trackclipslot.get('is_playing');
             log('RESULT OF IS PLAYING : ', this.isPlaying);
             this.trackclipslot.call('delete_clip');
         }
         this.trackclipslot.call('create_clip', '10');
-
-        this.liveObject = new LiveAPI(sample_callback2, "live_set view highlighted_clip_slot clip");
+        this.liveObject = new LiveAPI("live_set view highlighted_clip_slot clip");
         this.liveObject.set('loop_end', SequenceLength / 2);
-
-
     } else log('NOT ARMED');
 }
 
@@ -74,7 +86,6 @@ Clip.prototype._parseNoteData = function(data) {
     var notes = [];
     // data starts with "notes"/count and ends with "done" (which we ignore)
     for (var i = 2, len = data.length - 1; i < len; i += 6) {
-        // and each note starts with "note" (which we ignore) and is 6 items in the list
         var note = new Note(data[i + 1], data[i + 2], data[i + 3], data[i + 4], data[i + 5]);
         notes.push(note);
     }
@@ -85,7 +96,6 @@ Clip.prototype.getSelectedNotes = function() {
     var data = this.liveObject.call('get_selected_notes');
     return this._parseNoteData(data);
 }
-
 
 Clip.prototype.getNotes = function(startTime, timeRange, startPitch, pitchRange) {
     if (!startTime) startTime = 0;
@@ -159,19 +169,10 @@ Note.prototype.getMuted = function() {
     return 0;
 }
 
-
-
-
 //--------------------------------------------------------------------
 
 function writeMidiClip(noteSequence) {
     post('selected clip');
-    // var clip = new Clip();
-    // var notes = clip.getSelectedNotes();
-    // notes.forEach(function(note) {
-    //     log(note);
-    // });
-
     var LiveSequence = [];
 
     post('sequence ', noteSequence, '\n');
@@ -181,19 +182,29 @@ function writeMidiClip(noteSequence) {
 
         var noteDuration = (noteSequence[key].endTime - noteSequence[key].startTime);
         LiveSequence.push(new Note(noteSequence[key].pitch, noteSequence[key].startTime, noteDuration, noteSequence[key].velocity, 0));
-
     }
 
     var clip = new Clip();
     clip.setNotes(LiveSequence);
     if (clip.isPlaying == 1) { clip.trackclipslot.call('fire'); };
-
 }
 
 
 //--------------------------------------------------------------------
 
 // MAX INPUT
+
+// Read Clip
+function readAbleton(data) {
+    log('reading current clip');
+    // READ CLIP CLASS
+    var clip = new ReadClip();
+    // No args, deal with in the frontend.
+    const currentClip = clip.returnData();
+    log(currentClip);
+    outlet(1, currentClip);
+}
+
 // function dictionary(dictName) {
 function dictionary(dictName) {
     post("incoming dict name: " + dictName + "\n");
@@ -204,16 +215,11 @@ function dictionary(dictName) {
     data = dict_to_jsobj(dataDict);
 
     // Print All Data with recursion.
-    // printobj(data, dictName);
-
     writeMidiClip(data);
-
     var newDict = jsobj_to_dict(data);
-
     outlet(0, "dictionary", newDict.name);
 }
 
-// returns or includes null if there is a dict without containing data.
 function dict_to_jsobj(dict) {
     if (dict == null) return null;
 

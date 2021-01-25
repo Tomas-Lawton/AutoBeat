@@ -1,3 +1,5 @@
+// Third party library for interface knobs.
+
 window.addEventListener("load", () => {
     let op = window.inputKnobsOptions || {};
     op.knobWidth = op.knobWidth || op.knobDiameter || 64;
