@@ -1,8 +1,13 @@
-This project combines web technologies, Max visual programming, the Live Object Model (LOM) and a tensorflow wrapper by Google called Magenta.js to create a an intelligent drum machine plugin for Ableton. The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses a RNN model for continuation and a density interpolation model to changes the 'density' of the sequence. (Learn more about models here: )[https://github.com/magenta/magenta-js]
+This project combines web technologies, Max visual programming, the Live Object Model (LOM) and a tensorflow wrapper by Google called Magenta.js to create an intelligent drum machine plugin for Ableton. The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses a RNN model for continuation and a density interpolation model to changes the 'density' of the sequence. (Learn more about models here: )[https://github.com/magenta/magenta-js]
 
-The Max patch is the brain of this app. It patch pipes data between the UI and Ableton along this continuum: 
+Demos:
+1. Hype Video: [https://youtu.be/CdLy-7iIT1g]
+2. Feature Walkthrough: [coming soon]
+
+The Max patch is the brain of this app. It pipes data between the UI and Ableton along this continuum: 
 UI -> Node -> Max -> Live API -> Max -> Node -> UI. 
-The Max patch runs multiple JS scripts and two node processes. Two nodes processes are required because the Max API is only available in the node process that's evoked by node.script in the max patch. Therefore two have interaction with Ableton to through the UI, two seperate process are required: 1 that handles interaction with Ableton through Max, and one that runs electron to create the interface. These instances can communicate both ways through sockets, although this only high level explanation. Due to the jank that is this project, there is a tonne of rogue code and some features are pretty questionable. Good luck!
+
+The Max patch runs multiple JS scripts and two node processes. Two nodes processes are required because the Max API is only available in the node process that's evoked by node.script in the max patch. Therefore to interact with Ableton programmatically from the UI, two seperate processes are required. One that handles interaction with Ableton through Max, and one that runs the electron process to create the interface. These instances can communicate both ways through sockets. This is only a high level explanation because the code is decently jank and the project is fundimentally a design project to do with designing conceptual models for musicians to use AI generation tools. Due to the jank, there is a tonne of rogue code and questionable features that I hope you'll improve. Good luck!
 
 To run this app, you'll need:
 1.    NPM
