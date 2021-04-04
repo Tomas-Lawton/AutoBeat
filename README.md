@@ -28,6 +28,7 @@ Set up:
 2.    Click the button labeled start. If something breaks you may need to run NPM i in the node directories. 
 3.    To expand the Max code, you can open the patch editor and unfreeze the patch. 
 
+![Screentshot](Screenshot.png)
 ## Thank yous!
 Thank you Yuichi Yogo for the boiler plate Max/Electron code, Tero Parviainen for the open source code that was the basis of the sequencer and Liam Bray for conceptual design guidance.
 
