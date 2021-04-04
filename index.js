@@ -26,7 +26,7 @@ io.on("connection", socket => {
 });
 
 io.listen(3000, function() {
-    console.log('listening on port 3000');
+    console.log('listening on port 3001');
 });
 
 // This will ensure that when this parent process is killed in maxpat (either by `node.script stop` or Max is shutdown for some reason),

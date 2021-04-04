@@ -129,21 +129,55 @@ Promise.all([
         densityRange = null;
 
 
+    // Read Ableton Data
     socket2.on("ClipData", (data) => {
+        const noteArray = parseNoteString(data);
+        console.log(noteArray);
+
+        const readSequence = remapNoteArray(noteArray);
+        console.log("MAPPED SEQUENCE: ", readSequence);
+        // convert to a notesequence.
+
+        // const sequence = toNoteSequence(readSequence);
+        // console.log("final sequence: ", sequence);
+        // state.pattern = fromNoteSequence(sequence);
+        state.pattern = readSequence;
+        renderPattern();
+
+
+        console.log('done');
+    });
+
+    // Does not work if notes are swung.
+    const remapNoteArray = (noteArray) => {
+
+        var remappednoteSequence = [];
+        // create step array.
+        for (let i = 0; i < state.patternLength; i++) { remappednoteSequence.push([]); };
+        //populate with start and drum
+        for (let i = 0; i < noteArray.length; i++) {
+            console.log(noteArray[i]);
+            remappednoteSequence[noteArray[i][1]].push(noteArray[i][0]);
+        }
+
+        return remappednoteSequence;
+    }
+
+    const parseNoteString = (data) => {
         var items = data.data.split(/[ ,]+/);
-        // console.log(items);
         const numNotes = items[1];
         var noteData = [];
         for (let i = 0; i < numNotes; i++) {
             var currentNote = (i * 6) + 2;
             var thisNote = [];
-            thisNote.push(items[currentNote + 1]); //midi pitch
-            thisNote.push(items[currentNote + 2]); //quantised start time
+            var thisMidiNote = items[currentNote + 1]; //midi pitch
+            var sequencerDrum = reverseMidiMapping.get(parseInt(thisMidiNote)); //look up an array of values for midi notes!
+            thisNote.push(sequencerDrum);
+            thisNote.push(2 * (items[currentNote + 2])); //quantised start time (doubled for sequencer)
             noteData.push(thisNote);
         }
-        console.log("Note Array: ", noteData);
-
-    });
+        return noteData;
+    }
 
     document.getElementById("length8").addEventListener("click", function() {
         setPatternLength(8);
@@ -465,7 +499,7 @@ Promise.all([
         let res = _.times(patternLength, () => []);
         for (let { pitch, quantizedStartStep }
             of notes) {
-            res[quantizedStartStep].push(reverseMidiMapping.get(pitch));
+            res[quantizedStartStep].push(reverseMidiMapping.get(parseInt(pitch)));
         }
         return res;
     }
@@ -598,9 +632,6 @@ Promise.all([
 
     document.querySelectorAll('.sequence-button').forEach(item => {
         item.addEventListener('click', event => {
-
-            console.log('old state ? ', state.pattern);
-
             const oldPattern = state.pattern;
             const oldLength = state.patternLength;
             const oldSeedLength = state.seedLength;
