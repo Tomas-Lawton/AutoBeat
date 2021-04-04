@@ -6,9 +6,10 @@ The plugin autocompletes musical ideas in real time and can create surprising no
 
 ![AUTOBEAT IMAGE](AutobeatImage.png)
 
-## Demos:
+## Video guides:
 1. Hype Video: [https://youtu.be/CdLy-7iIT1g]
-2. Feature Walkthrough: [coming soon]
+2. Set up guide: [https://youtu.be/cYFyo449VpU]
+3. Feature demo: [https://youtu.be/fV6Y8C3ayOU]
 
 ## Pipeline:
 The Max patch is the brain of this app. It pipes data between the UI and Ableton along this continuum: 
