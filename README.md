@@ -39,4 +39,4 @@ Thank you Yuichi Yogo for the boiler plate Max/Electron code, Tero Parviainen fo
 ## Socials
 1. Portfolio [currently in migration]
 2. Insta [www.instagram.com/soju_club]
-3. LinkedIn [linkedin.com/in/tomas-lawton-512066199]
+3. LinkedIn [www.linkedin.com/in/tomas-lawton-512066199]
