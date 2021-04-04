@@ -4,7 +4,7 @@ This project combines web technologies, Max visual programming, the Live Object 
 ## Autobeat
 The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses a RNN model for continuation and a density interpolation model to changes the 'density' of the sequence. (Learn more about models here: )[https://github.com/magenta/magenta-js]
 
-![AUTOBEAT IMAGE](AUTOBEAT.png)
+![AUTOBEAT IMAGE](AutobeatImage.png)
 
 ## Demos:
 1. Hype Video: [https://youtu.be/CdLy-7iIT1g]
