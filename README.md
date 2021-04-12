@@ -1,8 +1,8 @@
-## Overview
-This project combines web technologies, Max visual programming, the Live Object Model (LOM) and a tensorflow wrapper by Google called Magenta.js to create an intelligent drum machine plugin for Ableton. 
+## Abstract
+AutoBeat is a project focusing on the creation of conceptual models to design artificially intelligent co-creative systems for music composition, and the application of these models to build a novel AI drum machine. The design phase involves exploration of the problem and its interaction paradigms, followed by iteration of possible machine learning concepts. The development phase converts the final concept into an integrated MIDI plugin by prototyping the frontend UI in Figma and implementing a functional pipeline with Electron, Node, Max the Live Object Model and a tensorflow wrapper by Google called Magenta.js. Validation will continue through interaction with this repository and user studies in 2021.
 
-## Autobeat
-The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses a RNN model for continuation and a density interpolation model to changes the 'density' of the sequence. (Learn more about models here: )[https://github.com/magenta/magenta-js]
+## Technical Overview
+This project combines web technologies, Max visual programming, the Live Object Model (LOM) and a tensorflow wrapper by Google called Magenta.js to create an intelligent drum machine plugin for Ableton. The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses a RNN model for continuation and a density interpolation model to changes the 'density' of the sequence. (Learn more about models here: )[https://github.com/magenta/magenta-js]
 
 ![AUTOBEAT IMAGE](AutobeatImage.png)
 
