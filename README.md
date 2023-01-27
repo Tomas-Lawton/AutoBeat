@@ -1,7 +1,6 @@
-# AutoBeat
-AutoBeat is an intellignet AI drum machine for co-creative music production. 
+# AutoBeat - Intelligent AI drum machine for co-creative music production.
 
-The design phase involves exploration of the problem and its interaction paradigms, followed by iteration of possible machine learning concepts. The plugin autocompletes musical ideas in real time and can create surprising novel musical outcomes from the fragment of a musical idea. The plugin uses the Magenta.js RNN model for continuation and a density interpolation model to changes the 'density' of the sequence.
+AutoBeat is a custom Ableton plugin that can autocompletes musical drum beats in real time from an idea fragment, leading to surprising and novel musical outcomes. The plugin is based on interacting with the Live Object Model through an interactive user interface, and producing ML outputs with a pretrained Magenta.js RNN model. This model allows for continuation and a density interpolation of user beats based on notes in the sequence.
 
 ![Screentshot](Screenshot.png)
 
